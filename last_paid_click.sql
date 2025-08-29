@@ -63,5 +63,4 @@ ORDER BY
     ps.visit_date ASC,
     ps.utm_source ASC,
     ps.utm_medium ASC,
-    ps.utm_campaign ASC
-LIMIT 10;
+    ps.utm_campaign ASC;
