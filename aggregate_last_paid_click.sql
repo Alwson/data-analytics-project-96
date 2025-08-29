@@ -1,5 +1,4 @@
--- ===== aggregate_last_paid_click.sql (fixed: visitors_count = COUNT DISTINCT visitor_id) =====
-
+-- ===== aggregate_last_paid_click.sql
 WITH paid_sessions AS (
     SELECT
         s.visitor_id,
@@ -25,7 +24,7 @@ ads_union AS (
     ) u
     GROUP BY campaign_date::date, lower(utm_source), lower(utm_medium), lower(utm_campaign)
 ),
--- ВИЗИТЫ: считаем уникальных посетителей за день по UTM-триплету
+-- ВИЗИТЫ: считаем уникальных посетителей за день по UTM
 visits_agg AS (
     SELECT
         p.visit_date,
@@ -130,4 +129,5 @@ ORDER BY
     k.utm_source ASC,
     k.utm_medium ASC,
     k.utm_campaign ASC,
+
     COALESCE(l.revenue, 0) DESC NULLS LAST;
