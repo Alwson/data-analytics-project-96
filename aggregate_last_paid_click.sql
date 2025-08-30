@@ -2,14 +2,14 @@
 
 with tab as (
     select
-        -- простые поля сначала (ST06)
+        -- простые поля
         s.visitor_id,
         l.lead_id,
         l.created_at,
         l.amount,
         l.closing_reason,
         l.status_id,
-        -- вычисляемые поля ниже
+        -- вычисляемые и приведённые поля
         s.visit_date::timestamp as visit_ts,
         s.visit_date::date as visit_date,
         lower(s.source) as utm_source,
@@ -25,8 +25,9 @@ with tab as (
         sessions as s
     left join
         leads as l
-        on s.visitor_id = l.visitor_id
-        and s.visit_date <= coalesce(l.created_at, s.visit_date)
+        on
+            s.visitor_id = l.visitor_id
+            and s.visit_date <= coalesce(l.created_at, s.visit_date)
     where
         lower(s.medium) <> 'organic'
 ),
@@ -99,10 +100,11 @@ from
     last_paid_click as lpv
 left join
     ads as a
-    on lpv.visit_date = a.campaign_date
-    and lpv.utm_source = a.utm_source
-    and lpv.utm_medium = a.utm_medium
-    and lpv.utm_campaign = a.utm_campaign
+    on
+        lpv.visit_date = a.campaign_date
+        and lpv.utm_source = a.utm_source
+        and lpv.utm_medium = a.utm_medium
+        and lpv.utm_campaign = a.utm_campaign
 order by
     lpv.visit_date asc,
     lpv.visitors_count desc,
