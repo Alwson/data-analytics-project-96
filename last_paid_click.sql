@@ -30,18 +30,21 @@ from (
             order by s.visit_date desc
         ) as rn
     from leads as l
-    join sessions as s
-        on l.visitor_id = s.visitor_id
-        and s.visit_date <= l.created_at               -- AM05: условия соединения в ON
-        and lower(s.medium) in (                       -- AM05: фильтр по medium тоже в ON
-            'cpc',
-            'cpm',
-            'cpa',
-            'youtube',
-            'cpp',
-            'tg',
-            'social'
-        )
+    inner join sessions as s
+        on
+            l.visitor_id = s.visitor_id
+            -- AM05: условия соединения в ON
+            and s.visit_date <= l.created_at
+            -- AM05: фильтр по medium тоже в ON
+            and lower(s.medium) in (
+                'cpc',
+                'cpm',
+                'cpa',
+                'youtube',
+                'cpp',
+                'tg',
+                'social'
+            )
 ) as t
 where t.rn = 1
 order by
@@ -51,4 +54,3 @@ order by
     t.utm_medium asc,
     t.utm_campaign asc
 limit 10;
-
