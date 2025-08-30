@@ -1,4 +1,4 @@
--- last_paid_click.sql
+-- last_paid_click.sql — упрощённая финальная версия (TOP-10)
 
 select
     t.visitor_id,
@@ -13,12 +13,14 @@ select
     t.status_id
 from (
     select
+        -- ST06: сначала простые поля
         s.visitor_id,
         l.lead_id,
         l.created_at,
         l.amount,
         l.closing_reason,
         l.status_id,
+        -- затем вычисляемые
         s.visit_date::timestamp as visit_date,
         lower(s.source) as utm_source,
         lower(s.medium) as utm_medium,
@@ -30,8 +32,8 @@ from (
     from leads as l
     join sessions as s
         on l.visitor_id = s.visitor_id
-        and l.created_at >= s.visit_date
-        and lower(s.medium) in (
+        and s.visit_date <= l.created_at               -- AM05: условия соединения в ON
+        and lower(s.medium) in (                       -- AM05: фильтр по medium тоже в ON
             'cpc',
             'cpm',
             'cpa',
