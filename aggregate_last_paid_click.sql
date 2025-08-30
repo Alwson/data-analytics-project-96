@@ -71,3 +71,42 @@ ads as (
             campaign_date,
             utm_source,
             utm_medium,
+            utm_campaign,
+            daily_spent
+        from
+            ya_ads
+    ) as a
+    group by
+        a.campaign_date::date,
+        lower(a.utm_source),
+        lower(a.utm_medium),
+        lower(a.utm_campaign)
+)
+
+select
+    lpv.visit_date,
+    lpv.visitors_count,
+    lpv.utm_source,
+    lpv.utm_medium,
+    lpv.utm_campaign,
+    a.total_cost,
+    lpv.leads_count,
+    lpv.purchases_count,
+    lpv.revenue
+from
+    last_paid_click as lpv
+left join
+    ads as a
+    on lpv.visit_date = a.campaign_date
+    and lpv.utm_source = a.utm_source
+    and lpv.utm_medium = a.utm_medium
+    and lpv.utm_campaign = a.utm_campaign
+order by
+    lpv.visit_date asc,
+    lpv.visitors_count desc,
+    lpv.utm_source asc,
+    lpv.utm_medium asc,
+    lpv.utm_campaign asc,
+    lpv.revenue desc nulls last
+limit 15;
+
