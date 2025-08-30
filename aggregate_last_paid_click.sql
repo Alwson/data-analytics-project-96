@@ -32,7 +32,9 @@ last_paid_click as (
         t.utm_campaign,
         count(t.visitor_id) as visitors_count,
         count(t.lead_id) as leads_count,
-        count(*) filter (where t.status_id = 142) as purchases_count,
+        count(*) filter (
+            where t.status_id = 142
+        ) as purchases_count,
         sum(t.amount) as revenue
     from tab as t
     where t.rn = 1
