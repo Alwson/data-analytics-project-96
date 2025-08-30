@@ -1,43 +1,52 @@
--- last_paid_click.sql — упрощённая финальная версия (TOP-10)
+-- last_paid_click.sql
 
-SELECT
-  t.visitor_id,
-  t.visit_date,      -- TIMESTAMP из sessions
-  t.utm_source,
-  t.utm_medium,
-  t.utm_campaign,
-  t.lead_id,
-  t.created_at,
-  t.amount,
-  t.closing_reason,
-  t.status_id
-FROM (
-  SELECT
-    s.visitor_id,
-    s.visit_date::timestamp AS visit_date,          -- в CSV нужен timestamp
-    lower(s.source)   AS utm_source,
-    lower(s.medium)   AS utm_medium,
-    lower(s.campaign) AS utm_campaign,
-    l.lead_id,
-    l.created_at,
-    l.amount,
-    l.closing_reason,
-    l.status_id,
-    ROW_NUMBER() OVER (
-      PARTITION BY l.lead_id
-      ORDER BY s.visit_date DESC
-    ) AS rn
-  FROM leads l
-  JOIN sessions s
-    ON s.visitor_id = l.visitor_id
-   AND s.visit_date <= l.created_at
-   AND lower(s.medium) IN ('cpc','cpm','cpa','youtube','cpp','tg','social')
-) t
-WHERE t.rn = 1
-ORDER BY
-  t.amount DESC NULLS LAST,
-  t.visit_date ASC,
-  t.utm_source ASC,
-  t.utm_medium ASC,
-  t.utm_campaign ASC
-LIMIT 10;
+select
+    t.visitor_id,
+    t.visit_date,
+    t.utm_source,
+    t.utm_medium,
+    t.utm_campaign,
+    t.lead_id,
+    t.created_at,
+    t.amount,
+    t.closing_reason,
+    t.status_id
+from (
+    select
+        s.visitor_id,
+        l.lead_id,
+        l.created_at,
+        l.amount,
+        l.closing_reason,
+        l.status_id,
+        s.visit_date::timestamp as visit_date,
+        lower(s.source) as utm_source,
+        lower(s.medium) as utm_medium,
+        lower(s.campaign) as utm_campaign,
+        row_number() over (
+            partition by l.lead_id
+            order by s.visit_date desc
+        ) as rn
+    from leads as l
+    join sessions as s
+        on l.visitor_id = s.visitor_id
+        and l.created_at >= s.visit_date
+        and lower(s.medium) in (
+            'cpc',
+            'cpm',
+            'cpa',
+            'youtube',
+            'cpp',
+            'tg',
+            'social'
+        )
+) as t
+where t.rn = 1
+order by
+    t.amount desc nulls last,
+    t.visit_date asc,
+    t.utm_source asc,
+    t.utm_medium asc,
+    t.utm_campaign asc
+limit 10;
+
