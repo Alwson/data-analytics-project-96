@@ -2,14 +2,14 @@
 
 with tab as (
     select
-        -- ST06: простые поля
+        -- простые поля сначала (ST06)
         s.visitor_id,
         l.lead_id,
         l.created_at,
         l.amount,
         l.closing_reason,
         l.status_id,
-        -- вычисляемые
+        -- вычисляемые поля ниже
         s.visit_date::timestamp as visit_ts,
         s.visit_date::date as visit_date,
         lower(s.source) as utm_source,
@@ -17,7 +17,9 @@ with tab as (
         lower(s.campaign) as utm_campaign,
         row_number() over (
             partition by s.visitor_id
-            order by s.visit_date desc, s.visitor_id desc
+            order by
+                s.visit_date desc,
+                s.visitor_id desc
         ) as rn
     from
         sessions as s
@@ -109,4 +111,3 @@ order by
     lpv.utm_campaign asc,
     lpv.revenue desc nulls last
 limit 15;
-
