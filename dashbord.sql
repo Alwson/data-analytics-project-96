@@ -85,7 +85,7 @@ WITH
         WHERE sr.rn = 1
     ),
 
-    visitors_from_leads_ranked AS (
+ visitors_from_leads_ranked AS (
         SELECT
             lpc.visitor_id,
             lpc.visit_date::date AS visit_date,
@@ -169,8 +169,7 @@ WITH
             v.utm_medium,
             v.utm_campaign
     ),
-
-    leads_agg AS (
+leads_agg AS (
         SELECT
             lpc.visit_date::date AS visit_date,
             lpc.utm_source,
@@ -246,22 +245,27 @@ SELECT
     -- метрики на строку (дневной срез)
     coalesce(au.total_cost, 0) / nullif(v.visitors_count, 0) AS cpu,
     coalesce(au.total_cost, 0) / nullif(coalesce(l.leads_count, 0), 0) AS cpl,
-    coalesce(au.total_cost, 0) / nullif(coalesce(l.purchases_count, 0), 0) AS cppu,
+    coalesce(au.total_cost, 0)
+    / nullif(coalesce(l.purchases_count, 0), 0) AS cppu,
     (coalesce(l.revenue, 0) - coalesce(au.total_cost, 0))
-        / nullif(coalesce(au.total_cost, 0), 0) * 100 AS roi_percent,
-    coalesce(l.leads_count, 0) / nullif(v.visitors_count, 0) AS cr_visit_to_lead,
-    coalesce(l.purchases_count, 0) / nullif(coalesce(l.leads_count, 0), 0) AS cr_lead_to_buy
+    / nullif(coalesce(au.total_cost, 0), 0) * 100 AS roi_percent,
+    coalesce(l.leads_count, 0)
+    / nullif(v.visitors_count, 0) AS cr_visit_to_lead,
+    coalesce(l.purchases_count, 0)
+    / nullif(coalesce(l.leads_count, 0), 0) AS cr_lead_to_buy
 FROM visits_agg AS v
 LEFT JOIN leads_agg AS l
-    ON l.visit_date   = v.visit_date
-   AND l.utm_source   = v.utm_source
-   AND l.utm_medium   = v.utm_medium
-   AND l.utm_campaign = v.utm_campaign
+    ON
+        v.visit_date = l.visit_date
+        AND v.utm_source = l.utm_source
+        AND v.utm_medium = l.utm_medium
+        AND v.utm_campaign = l.utm_campaign
 LEFT JOIN ads_union AS au
-    ON au.visit_date   = v.visit_date
-   AND au.utm_source   = v.utm_source
-   AND au.utm_medium   = v.utm_medium
-   AND au.utm_campaign = v.utm_campaign
-;
+    ON
+        v.visit_date = au.visit_date
+        AND v.utm_source = au.utm_source
+        AND v.utm_medium = au.utm_medium
+        AND v.utm_campaign = au.utm_campaign;
 
 -- ========================= dataset A (основное) ==========================
+
