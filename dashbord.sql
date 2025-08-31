@@ -16,8 +16,8 @@ with last_paid_click as (
         select
             s.visitor_id,
             s.visit_date::timestamp as visit_date,
-            lower(s.source)   as utm_source,
-            lower(s.medium)   as utm_medium,
+            lower(s.source) as utm_source,
+            lower(s.medium) as utm_medium,
             lower(s.campaign) as utm_campaign,
             l.lead_id,
             l.created_at,
@@ -36,8 +36,8 @@ with last_paid_click as (
         from leads as l
         join sessions as s
             on s.visitor_id = l.visitor_id
-           and s.visit_date <= l.created_at
-           and lower(s.medium) in ('cpc','cpm','cpa','youtube','cpp','tg','social')
+            and s.visit_date <= l.created_at
+            and lower(s.medium) in ('cpc', 'cpm', 'cpa', 'youtube', 'cpp', 'tg', 'social')
     ) as t
     where t.rn = 1
 ),
@@ -46,12 +46,12 @@ sessions_norm as (
     select
         s.visitor_id,
         s.visit_date::timestamp as visit_ts,
-        s.visit_date::date      as visit_date,
-        lower(s.source)   as utm_source,
-        lower(s.medium)   as utm_medium,
+        s.visit_date::date as visit_date,
+        lower(s.source) as utm_source,
+        lower(s.medium) as utm_medium,
         lower(s.campaign) as utm_campaign
     from sessions as s
-    where lower(s.medium) in ('cpc','cpm','cpa','youtube','cpp','tg','social')
+    where lower(s.medium) in ('cpc', 'cpm', 'cpa', 'youtube', 'cpp', 'tg', 'social')
 ),
 
 last_paid_sessions as (
@@ -122,7 +122,7 @@ visitors_without_leads_today as (
         from last_paid_click as lpc
     ) as has_lead_today
         on lps.visitor_id = has_lead_today.visitor_id
-       and lps.visit_date = has_lead_today.visit_date
+        and lps.visit_date = has_lead_today.visit_date
     where has_lead_today.visitor_id is null
 ),
 
@@ -171,14 +171,14 @@ leads_agg as (
         count(
             distinct case
                 when lpc.closing_reason = 'Успешно реализовано'
-                  or lpc.status_id = 142
+                    or lpc.status_id = 142
                 then lpc.lead_id
             end
         ) as purchases_count,
         sum(
             case
                 when lpc.closing_reason = 'Успешно реализовано'
-                  or lpc.status_id = 142
+                    or lpc.status_id = 142
                 then lpc.amount
             end
         ) as revenue
@@ -193,10 +193,10 @@ leads_agg as (
 ads_union as (
     select
         a.campaign_date::date as visit_date,
-        lower(a.utm_source)   as utm_source,
-        lower(a.utm_medium)   as utm_medium,
+        lower(a.utm_source) as utm_source,
+        lower(a.utm_medium) as utm_medium,
         lower(a.utm_campaign) as utm_campaign,
-        sum(a.daily_spent)    as total_cost
+        sum(a.daily_spent) as total_cost
     from (
         select
             vk.campaign_date,
@@ -216,7 +216,7 @@ ads_union as (
             ya.daily_spent
         from ya_ads as ya
     ) as a
-    where lower(a.utm_source) in ('yandex','vk')
+    where lower(a.utm_source) in ('yandex', 'vk')
     group by
         a.campaign_date::date,
         lower(a.utm_source),
@@ -230,29 +230,29 @@ select
     v.utm_medium,
     v.utm_campaign,
     v.visitors_count,
-    coalesce(au.total_cost, 0)          as total_cost,
-    coalesce(l.leads_count, 0)          as leads_count,
-    coalesce(l.purchases_count, 0)      as purchases_count,
-    coalesce(l.revenue, 0)              as revenue,
+    coalesce(au.total_cost, 0) as total_cost,
+    coalesce(l.leads_count, 0) as leads_count,
+    coalesce(l.purchases_count, 0) as purchases_count,
+    coalesce(l.revenue, 0) as revenue,
     -- метрики на строку (дневной срез)
-    coalesce(au.total_cost, 0) / nullif(v.visitors_count, 0)                 as cpu,
-    coalesce(au.total_cost, 0) / nullif(coalesce(l.leads_count, 0), 0)       as cpl,
-    coalesce(au.total_cost, 0) / nullif(coalesce(l.purchases_count, 0), 0)   as cppu,
+    coalesce(au.total_cost, 0) / nullif(v.visitors_count, 0) as cpu,
+    coalesce(au.total_cost, 0) / nullif(coalesce(l.leads_count, 0), 0) as cpl,
+    coalesce(au.total_cost, 0) / nullif(coalesce(l.purchases_count, 0), 0) as cppu,
     (coalesce(l.revenue, 0) - coalesce(au.total_cost, 0))
-        / nullif(coalesce(au.total_cost, 0), 0) * 100                        as roi_percent,
-    coalesce(l.leads_count, 0)      / nullif(v.visitors_count, 0)            as cr_visit_to_lead,
-    coalesce(l.purchases_count, 0)  / nullif(coalesce(l.leads_count, 0), 0)  as cr_lead_to_buy
+        / nullif(coalesce(au.total_cost, 0), 0) * 100 as roi_percent,
+    coalesce(l.leads_count, 0) / nullif(v.visitors_count, 0) as cr_visit_to_lead,
+    coalesce(l.purchases_count, 0) / nullif(coalesce(l.leads_count, 0), 0) as cr_lead_to_buy
 from visits_agg as v
 left join leads_agg as l
-    on v.visit_date   = l.visit_date
-   and v.utm_source   = l.utm_source
-   and v.utm_medium   = l.utm_medium
-   and v.utm_campaign = l.utm_campaign
+    on v.visit_date = l.visit_date
+            and v.utm_source = l.utm_source
+            and v.utm_medium = l.utm_medium
+            and v.utm_campaign = l.utm_campaign
 left join ads_union as au
-    on v.visit_date   = au.visit_date
-   and v.utm_source   = au.utm_source
-   and v.utm_medium   = au.utm_medium
-   and v.utm_campaign = au.utm_campaign
+    on v.visit_date = au.visit_date
+            and v.utm_source = au.utm_source
+            and v.utm_medium = au.utm_medium
+            and v.utm_campaign = au.utm_campaign
 ;
 
 -- === dataset A (основное) ================================================
@@ -275,8 +275,8 @@ with daily_smc as (
             select
                 s.visitor_id,
                 s.visit_date::timestamp as visit_date,
-                lower(s.source)   as utm_source,
-                lower(s.medium)   as utm_medium,
+                lower(s.source) as utm_source,
+                lower(s.medium) as utm_medium,
                 lower(s.campaign) as utm_campaign,
                 l.lead_id,
                 l.created_at,
@@ -295,8 +295,8 @@ with daily_smc as (
             from leads as l
             join sessions as s
                 on s.visitor_id = l.visitor_id
-               and s.visit_date <= l.created_at
-               and lower(s.medium) in ('cpc','cpm','cpa','youtube','cpp','tg','social')
+                and s.visit_date <= l.created_at
+                and lower(s.medium) in ('cpc', 'cpm', 'cpa', 'youtube', 'cpp', 'tg', 'social')
         ) as t
         where t.rn = 1
     ),
@@ -305,12 +305,12 @@ with daily_smc as (
         select
             s.visitor_id,
             s.visit_date::timestamp as visit_ts,
-            s.visit_date::date      as visit_date,
-            lower(s.source)   as utm_source,
-            lower(s.medium)   as utm_medium,
+            s.visit_date::date as visit_date,
+            lower(s.source) as utm_source,
+            lower(s.medium) as utm_medium,
             lower(s.campaign) as utm_campaign
         from sessions as s
-        where lower(s.medium) in ('cpc','cpm','cpa','youtube','cpp','tg','social')
+        where lower(s.medium) in ('cpc', 'cpm', 'cpa', 'youtube', 'cpp', 'tg', 'social')
     ),
 
     last_paid_sessions as (
@@ -381,7 +381,7 @@ with daily_smc as (
             from last_paid_click as lpc
         ) as has_lead_today
             on lps.visitor_id = has_lead_today.visitor_id
-           and lps.visit_date = has_lead_today.visit_date
+            and lps.visit_date = has_lead_today.visit_date
         where has_lead_today.visitor_id is null
     ),
 
@@ -430,14 +430,14 @@ with daily_smc as (
             count(
                 distinct case
                     when lpc.closing_reason = 'Успешно реализовано'
-                      or lpc.status_id = 142
+                        or lpc.status_id = 142
                     then lpc.lead_id
                 end
             ) as purchases_count,
             sum(
                 case
                     when lpc.closing_reason = 'Успешно реализовано'
-                      or lpc.status_id = 142
+                        or lpc.status_id = 142
                     then lpc.amount
                 end
             ) as revenue
@@ -452,10 +452,10 @@ with daily_smc as (
     ads_union as (
         select
             a.campaign_date::date as visit_date,
-            lower(a.utm_source)   as utm_source,
-            lower(a.utm_medium)   as utm_medium,
+            lower(a.utm_source) as utm_source,
+            lower(a.utm_medium) as utm_medium,
             lower(a.utm_campaign) as utm_campaign,
-            sum(a.daily_spent)    as total_cost
+            sum(a.daily_spent) as total_cost
         from (
             select
                 vk.campaign_date,
@@ -475,7 +475,7 @@ with daily_smc as (
                 ya.daily_spent
             from ya_ads as ya
         ) as a
-        where lower(a.utm_source) in ('yandex','vk')
+        where lower(a.utm_source) in ('yandex', 'vk')
         group by
             a.campaign_date::date,
             lower(a.utm_source),
@@ -489,32 +489,32 @@ with daily_smc as (
         v.utm_medium,
         v.utm_campaign,
         v.visitors_count,
-        coalesce(au.total_cost, 0)     as total_cost,
-        coalesce(l.leads_count, 0)     as leads_count,
+        coalesce(au.total_cost, 0) as total_cost,
+        coalesce(l.leads_count, 0) as leads_count,
         coalesce(l.purchases_count, 0) as purchases_count,
-        coalesce(l.revenue, 0)         as revenue
+        coalesce(l.revenue, 0) as revenue
     from visits_agg as v
     left join leads_agg as l
-        on v.visit_date   = l.visit_date
-       and v.utm_source   = l.utm_source
-       and v.utm_medium   = l.utm_medium
-       and v.utm_campaign = l.utm_campaign
+        on v.visit_date = l.visit_date
+                and v.utm_source = l.utm_source
+                and v.utm_medium = l.utm_medium
+                and v.utm_campaign = l.utm_campaign
     left join ads_union as au
-        on v.visit_date   = au.visit_date
-       and v.utm_source   = au.utm_source
-       and v.utm_medium   = au.utm_medium
-       and v.utm_campaign = au.utm_campaign
+        on v.visit_date = au.visit_date
+                and v.utm_source = au.utm_source
+                and v.utm_medium = au.utm_medium
+                and v.utm_campaign = au.utm_campaign
 ),
 
 agg_source as (
     select
         ds.visit_date,
         ds.utm_source,
-        sum(ds.visitors_count)   as visitors_count,
-        sum(ds.total_cost)       as total_cost,
-        sum(ds.leads_count)      as leads_count,
-        sum(ds.purchases_count)  as purchases_count,
-        sum(ds.revenue)          as revenue
+        sum(ds.visitors_count) as visitors_count,
+        sum(ds.total_cost) as total_cost,
+        sum(ds.leads_count) as leads_count,
+        sum(ds.purchases_count) as purchases_count,
+        sum(ds.revenue) as revenue
     from daily_smc as ds
     group by
         ds.visit_date,
@@ -530,11 +530,11 @@ select
     a.purchases_count,
     a.revenue,
     -- корректные ratio-of-sums по источнику и дню
-    a.total_cost / nullif(a.visitors_count, 0)  as cpu,
-    a.total_cost / nullif(a.leads_count, 0)     as cpl,
+    a.total_cost / nullif(a.visitors_count, 0) as cpu,
+    a.total_cost / nullif(a.leads_count, 0) as cpl,
     a.total_cost / nullif(a.purchases_count, 0) as cppu,
     (a.revenue - a.total_cost) / nullif(a.total_cost, 0) * 100 as roi_percent,
-    a.leads_count     / nullif(a.visitors_count, 0) as cr_visit_to_lead,
-    a.purchases_count / nullif(a.leads_count, 0)    as cr_lead_to_buy
+    a.leads_count / nullif(a.visitors_count, 0) as cr_visit_to_lead,
+    a.purchases_count / nullif(a.leads_count, 0) as cr_lead_to_buy
 from agg_source as a
 ;
