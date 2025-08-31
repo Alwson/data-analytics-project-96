@@ -1,7 +1,6 @@
 -- dashbord.sql
 
 WITH
--- 1) последний платный клик до лида
 last_paid_click_base AS (
     SELECT
         l.lead_id,
@@ -14,7 +13,7 @@ last_paid_click_base AS (
         lower(s.source) AS utm_source,
         lower(s.medium) AS utm_medium,
         lower(s.campaign) AS utm_campaign,
-        ROW_NUMBER() OVER (
+        row_number() OVER (
             PARTITION BY l.lead_id
             ORDER BY
                 s.visit_date DESC,
@@ -48,7 +47,6 @@ last_paid_click AS (
     WHERE rn = 1
 ),
 
--- 2) нормализованные сессии и последняя платная сессия в день
 sessions_norm AS (
     SELECT
         s.visitor_id,
@@ -66,7 +64,7 @@ sessions_norm AS (
 sessions_ranked AS (
     SELECT
         sn.*,
-        ROW_NUMBER() OVER (
+        row_number() OVER (
             PARTITION BY sn.visitor_id, sn.visit_date
             ORDER BY
                 sn.visit_ts DESC,
@@ -89,7 +87,6 @@ last_paid_sessions AS (
     WHERE rn = 1
 ),
 
--- 3) посетители по лидам и без лида в тот день
 visitors_from_leads_ranked AS (
     SELECT
         lpc.visitor_id,
@@ -98,7 +95,7 @@ visitors_from_leads_ranked AS (
         lpc.utm_medium,
         lpc.utm_campaign,
         lpc.created_at,
-        ROW_NUMBER() OVER (
+        row_number() OVER (
             PARTITION BY lpc.visitor_id, lpc.visit_date::date
             ORDER BY
                 lpc.created_at DESC,
@@ -142,7 +139,6 @@ visitors_without_leads_today AS (
     WHERE hlt.visitor_id IS NULL
 ),
 
--- 4) все посетители и агрегаты
 visitors_all AS (
     SELECT
         vfl.visitor_id,
@@ -169,7 +165,7 @@ visits_agg AS (
         v.utm_source,
         v.utm_medium,
         v.utm_campaign,
-        COUNT(*) AS visitors_count
+        count(*) AS visitors_count
     FROM visitors_all AS v
     GROUP BY
         v.visit_date,
@@ -184,15 +180,15 @@ leads_agg AS (
         lpc.utm_source,
         lpc.utm_medium,
         lpc.utm_campaign,
-        COUNT(DISTINCT lpc.lead_id) AS leads_count,
-        COUNT(
+        count(DISTINCT lpc.lead_id) AS leads_count,
+        count(
             DISTINCT CASE
                 WHEN lpc.closing_reason = 'Успешно реализовано'
                   OR lpc.status_id = 142
                 THEN lpc.lead_id
             END
         ) AS purchases_count,
-        SUM(
+        sum(
             CASE
                 WHEN lpc.closing_reason = 'Успешно реализовано'
                   OR lpc.status_id = 142
@@ -207,7 +203,6 @@ leads_agg AS (
         lpc.utm_campaign
 ),
 
--- 5) расходы рекламы
 ads_raw AS (
     SELECT
         vk.campaign_date,
@@ -234,7 +229,7 @@ ads_union AS (
         lower(ar.utm_source) AS utm_source,
         lower(ar.utm_medium) AS utm_medium,
         lower(ar.utm_campaign) AS utm_campaign,
-        SUM(ar.daily_spent) AS total_cost
+        sum(ar.daily_spent) AS total_cost
     FROM ads_raw AS ar
     WHERE lower(ar.utm_source) IN ('yandex', 'vk')
     GROUP BY
@@ -250,23 +245,23 @@ SELECT
     v.utm_medium,
     v.utm_campaign,
     v.visitors_count,
-    COALESCE(au.total_cost, 0) AS total_cost,
-    COALESCE(l.leads_count, 0) AS leads_count,
-    COALESCE(l.purchases_count, 0) AS purchases_count,
-    COALESCE(l.revenue, 0) AS revenue,
+    coalesce(au.total_cost, 0) AS total_cost,
+    coalesce(l.leads_count, 0) AS leads_count,
+    coalesce(l.purchases_count, 0) AS purchases_count,
+    coalesce(l.revenue, 0) AS revenue,
     -- метрики на строку (дневной срез)
-    COALESCE(au.total_cost, 0)
-        / NULLIF(v.visitors_count, 0) AS cpu,
-    COALESCE(au.total_cost, 0)
-        / NULLIF(COALESCE(l.leads_count, 0), 0) AS cpl,
-    COALESCE(au.total_cost, 0)
-        / NULLIF(COALESCE(l.purchases_count, 0), 0) AS cppu,
-    (COALESCE(l.revenue, 0) - COALESCE(au.total_cost, 0))
-        / NULLIF(COALESCE(au.total_cost, 0), 0) * 100 AS roi_percent,
-    COALESCE(l.leads_count, 0)
-        / NULLIF(v.visitors_count, 0) AS cr_visit_to_lead,
-    COALESCE(l.purchases_count, 0)
-        / NULLIF(COALESCE(l.leads_count, 0), 0) AS cr_lead_to_buy
+    coalesce(au.total_cost, 0)
+        / nullif(v.visitors_count, 0) AS cpu,
+    coalesce(au.total_cost, 0)
+        / nullif(coalesce(l.leads_count, 0), 0) AS cpl,
+    coalesce(au.total_cost, 0)
+        / nullif(coalesce(l.purchases_count, 0), 0) AS cppu,
+    (coalesce(l.revenue, 0) - coalesce(au.total_cost, 0))
+        / nullif(coalesce(au.total_cost, 0), 0) * 100 AS roi_percent,
+    coalesce(l.leads_count, 0)
+        / nullif(v.visitors_count, 0) AS cr_visit_to_lead,
+    coalesce(l.purchases_count, 0)
+        / nullif(coalesce(l.leads_count, 0), 0) AS cr_lead_to_buy
 FROM visits_agg AS v
 LEFT JOIN leads_agg AS l
     ON v.visit_date = l.visit_date
