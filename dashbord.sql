@@ -18,9 +18,9 @@ WITH metrics AS (
     LEFT JOIN ads_union AS au
         ON
             v.visit_date = au.visit_date
-           AND v.utm_source = au.utm_source
-           AND v.utm_medium = au.utm_medium
-           AND v.utm_campaign = au.utm_campaign
+            AND v.utm_source = au.utm_source
+            AND v.utm_medium = au.utm_medium
+            AND v.utm_campaign = au.utm_campaign
     GROUP BY
         v.utm_source
 )
@@ -38,6 +38,4 @@ SELECT
     (m.revenue - m.total_cost) / NULLIF(m.total_cost, 0) * 100 AS roi_percent
 FROM metrics AS m
 ORDER BY
-    roi_percent DESC NULLS LAST
-;
-
+    roi_percent DESC NULLS LAST;
