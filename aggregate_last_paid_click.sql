@@ -29,7 +29,7 @@ WITH last_paid_click AS (
                 ORDER BY s.visit_date DESC
             ) AS rn
         FROM leads AS l
-        JOIN sessions AS s
+        INNER JOIN sessions AS s
             ON
                 leads.visitor_id = sessions.visitor_id
                 AND leads.created_at >= sessions.visit_date
@@ -148,3 +148,4 @@ LEFT JOIN
 ORDER BY
     v.visit_date ASC,
     v.utm_source ASC;
+
