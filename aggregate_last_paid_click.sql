@@ -21,8 +21,8 @@ WITH last_paid_click AS (
             l.closing_reason,
             l.status_id,
             s.visit_date::timestamp AS visit_date,
-            LOWER(s.source)  AS utm_source,
-            LOWER(s.medium)  AS utm_medium,
+            LOWER(s.source) AS utm_source,
+            LOWER(s.medium) AS utm_medium,
             LOWER(s.campaign) AS utm_campaign,
             ROW_NUMBER() OVER (
                 PARTITION BY l.lead_id
@@ -31,7 +31,7 @@ WITH last_paid_click AS (
         FROM leads AS l
         JOIN sessions AS s
             ON l.visitor_id = s.visitor_id
-           AND s.visit_date <= l.created_at
+           AND l.created_at >= s.visit_date
         WHERE LOWER(s.medium) IN (
             'cpc', 'cpm', 'cpa', 'youtube', 'cpp', 'tg', 'social'
         )
@@ -42,9 +42,9 @@ WITH last_paid_click AS (
 visits_agg AS (
     SELECT
         s.visit_date::date AS visit_date,
-        LOWER(s.source)    AS utm_source,
-        LOWER(s.medium)    AS utm_medium,
-        LOWER(s.campaign)  AS utm_campaign,
+        LOWER(s.source) AS utm_source,
+        LOWER(s.medium) AS utm_medium,
+        LOWER(s.campaign) AS utm_campaign,
         COUNT(DISTINCT s.visitor_id) AS visitors_count
     FROM sessions AS s
     WHERE LOWER(s.medium) IN (
@@ -89,10 +89,10 @@ leads_agg AS (
 ads_union AS (
     SELECT
         u.campaign_date::date AS visit_date,
-        LOWER(u.utm_source)   AS utm_source,
-        LOWER(u.utm_medium)   AS utm_medium,
+        LOWER(u.utm_source) AS utm_source,
+        LOWER(u.utm_medium) AS utm_medium,
         LOWER(u.utm_campaign) AS utm_campaign,
-        SUM(u.daily_spent)    AS total_cost
+        SUM(u.daily_spent) AS total_cost
     FROM (
         SELECT
             vk.campaign_date,
@@ -129,14 +129,14 @@ SELECT
     l.revenue
 FROM visits_agg AS v
 LEFT JOIN leads_agg AS l
-    ON v.visit_date   = l.visit_date
-   AND v.utm_source   = l.utm_source
-   AND v.utm_medium   = l.utm_medium
+    ON v.visit_date = l.visit_date
+   AND v.utm_source = l.utm_source
+   AND v.utm_medium = l.utm_medium
    AND v.utm_campaign = l.utm_campaign
 LEFT JOIN ads_union AS au
-    ON v.visit_date   = au.visit_date
-   AND v.utm_source   = au.utm_source
-   AND v.utm_medium   = au.utm_medium
+    ON v.visit_date = au.visit_date
+   AND v.utm_source = au.utm_source
+   AND v.utm_medium = au.utm_medium
    AND v.utm_campaign = au.utm_campaign
 ORDER BY
     v.visit_date ASC,
