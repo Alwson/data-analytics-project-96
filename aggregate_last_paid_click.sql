@@ -148,4 +148,3 @@ LEFT JOIN
 ORDER BY
     v.visit_date ASC,
     v.utm_source ASC;
-
