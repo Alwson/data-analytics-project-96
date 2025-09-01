@@ -16,31 +16,29 @@ WITH
         FROM (
             SELECT
                 s.visitor_id,
-                s.visit_date::timestamp AS visit_date,
-                lower(s.source) AS utm_source,
-                lower(s.medium) AS utm_medium,
-                lower(s.campaign) AS utm_campaign,
                 l.lead_id,
                 l.created_at,
                 l.amount,
                 l.closing_reason,
                 l.status_id,
-                row_number() OVER (
+                s.visit_date::timestamp AS visit_date,
+                LOWER(s.source) AS utm_source,
+                LOWER(s.medium) AS utm_medium,
+                LOWER(s.campaign) AS utm_campaign,
+                ROW_NUMBER() OVER (
                     PARTITION BY l.lead_id
                     ORDER BY
                         s.visit_date DESC,
-                        lower(s.source) ASC,
-                        lower(s.medium) ASC,
-                        lower(s.campaign) ASC,
+                        LOWER(s.source) ASC,
+                        LOWER(s.medium) ASC,
+                        LOWER(s.campaign) ASC,
                         s.visitor_id DESC
                 ) AS rn
             FROM leads AS l
             JOIN sessions AS s
                 ON l.visitor_id = s.visitor_id
                AND s.visit_date <= l.created_at
-               AND lower(s.medium) IN (
-                   'cpc', 'cpm', 'cpa', 'youtube', 'cpp', 'tg', 'social'
-               )
+            WHERE LOWER(s.medium) IN ('cpc', 'cpm', 'cpa', 'youtube', 'cpp', 'tg', 'social')
         ) AS t
         WHERE t.rn = 1
     ),
@@ -50,19 +48,17 @@ WITH
             s.visitor_id,
             s.visit_date::timestamp AS visit_ts,
             s.visit_date::date AS visit_date,
-            lower(s.source) AS utm_source,
-            lower(s.medium) AS utm_medium,
-            lower(s.campaign) AS utm_campaign
+            LOWER(s.source) AS utm_source,
+            LOWER(s.medium) AS utm_medium,
+            LOWER(s.campaign) AS utm_campaign
         FROM sessions AS s
-        WHERE lower(s.medium) IN (
-            'cpc', 'cpm', 'cpa', 'youtube', 'cpp', 'tg', 'social'
-        )
+        WHERE LOWER(s.medium) IN ('cpc', 'cpm', 'cpa', 'youtube', 'cpp', 'tg', 'social')
     ),
 
     sessions_ranked AS (
         SELECT
             sn.*,
-            row_number() OVER (
+            ROW_NUMBER() OVER (
                 PARTITION BY sn.visitor_id, sn.visit_date
                 ORDER BY
                     sn.visit_ts DESC,
@@ -85,7 +81,7 @@ WITH
         WHERE sr.rn = 1
     ),
 
- visitors_from_leads_ranked AS (
+    visitors_from_leads_ranked AS (
         SELECT
             lpc.visitor_id,
             lpc.visit_date::date AS visit_date,
@@ -93,7 +89,7 @@ WITH
             lpc.utm_medium,
             lpc.utm_campaign,
             lpc.created_at,
-            row_number() OVER (
+            ROW_NUMBER() OVER (
                 PARTITION BY lpc.visitor_id, lpc.visit_date::date
                 ORDER BY
                     lpc.created_at DESC,
@@ -132,8 +128,8 @@ WITH
             lps.utm_campaign
         FROM last_paid_sessions AS lps
         LEFT JOIN has_lead_today AS hlt
-            ON hlt.visitor_id = lps.visitor_id
-           AND hlt.visit_date = lps.visit_date
+            ON lps.visitor_id = hlt.visitor_id
+           AND lps.visit_date = hlt.visit_date
         WHERE hlt.visitor_id IS NULL
     ),
 
@@ -161,7 +157,7 @@ WITH
             v.utm_source,
             v.utm_medium,
             v.utm_campaign,
-            count(*) AS visitors_count
+            COUNT(*) AS visitors_count
         FROM visitors_all AS v
         GROUP BY
             v.visit_date,
@@ -169,21 +165,22 @@ WITH
             v.utm_medium,
             v.utm_campaign
     ),
-leads_agg AS (
+
+    leads_agg AS (
         SELECT
             lpc.visit_date::date AS visit_date,
             lpc.utm_source,
             lpc.utm_medium,
             lpc.utm_campaign,
-            count(DISTINCT lpc.lead_id) AS leads_count,
-            count(
+            COUNT(DISTINCT lpc.lead_id) AS leads_count,
+            COUNT(
                 DISTINCT CASE
                     WHEN lpc.closing_reason = 'Успешно реализовано'
                       OR lpc.status_id = 142
                     THEN lpc.lead_id
                 END
             ) AS purchases_count,
-            sum(
+            SUM(
                 CASE
                     WHEN lpc.closing_reason = 'Успешно реализовано'
                       OR lpc.status_id = 142
@@ -219,17 +216,17 @@ leads_agg AS (
     ads_union AS (
         SELECT
             ar.campaign_date::date AS visit_date,
-            lower(ar.utm_source) AS utm_source,
-            lower(ar.utm_medium) AS utm_medium,
-            lower(ar.utm_campaign) AS utm_campaign,
-            sum(ar.daily_spent) AS total_cost
+            LOWER(ar.utm_source) AS utm_source,
+            LOWER(ar.utm_medium) AS utm_medium,
+            LOWER(ar.utm_campaign) AS utm_campaign,
+            SUM(ar.daily_spent) AS total_cost
         FROM ads_raw AS ar
-        WHERE lower(ar.utm_source) IN ('yandex', 'vk')
+        WHERE LOWER(ar.utm_source) IN ('yandex', 'vk')
         GROUP BY
             ar.campaign_date::date,
-            lower(ar.utm_source),
-            lower(ar.utm_medium),
-            lower(ar.utm_campaign)
+            LOWER(ar.utm_source),
+            LOWER(ar.utm_medium),
+            LOWER(ar.utm_campaign)
     )
 
 SELECT
@@ -238,34 +235,32 @@ SELECT
     v.utm_medium,
     v.utm_campaign,
     v.visitors_count,
-    coalesce(au.total_cost, 0) AS total_cost,
-    coalesce(l.leads_count, 0) AS leads_count,
-    coalesce(l.purchases_count, 0) AS purchases_count,
-    coalesce(l.revenue, 0) AS revenue,
-    -- метрики на строку (дневной срез)
-    coalesce(au.total_cost, 0) / nullif(v.visitors_count, 0) AS cpu,
-    coalesce(au.total_cost, 0) / nullif(coalesce(l.leads_count, 0), 0) AS cpl,
-    coalesce(au.total_cost, 0)
-    / nullif(coalesce(l.purchases_count, 0), 0) AS cppu,
-    (coalesce(l.revenue, 0) - coalesce(au.total_cost, 0))
-    / nullif(coalesce(au.total_cost, 0), 0) * 100 AS roi_percent,
-    coalesce(l.leads_count, 0)
-    / nullif(v.visitors_count, 0) AS cr_visit_to_lead,
-    coalesce(l.purchases_count, 0)
-    / nullif(coalesce(l.leads_count, 0), 0) AS cr_lead_to_buy
+    COALESCE(au.total_cost, 0) AS total_cost,
+    COALESCE(l.leads_count, 0) AS leads_count,
+    COALESCE(l.purchases_count, 0) AS purchases_count,
+    COALESCE(l.revenue, 0) AS revenue,
+    -- per-row metrics (day slice)
+    COALESCE(au.total_cost, 0) / NULLIF(v.visitors_count, 0) AS cpu,
+    COALESCE(au.total_cost, 0) / NULLIF(COALESCE(l.leads_count, 0), 0) AS cpl,
+    COALESCE(au.total_cost, 0) / NULLIF(COALESCE(l.purchases_count, 0), 0) AS cppu,
+    (COALESCE(l.revenue, 0) - COALESCE(au.total_cost, 0)) / NULLIF(COALESCE(au.total_cost, 0), 0) * 100 AS roi_percent,
+    COALESCE(l.leads_count, 0) / NULLIF(v.visitors_count, 0) AS cr_visit_to_lead,
+    COALESCE(l.purchases_count, 0) / NULLIF(COALESCE(l.leads_count, 0), 0) AS cr_lead_to_buy
 FROM visits_agg AS v
 LEFT JOIN leads_agg AS l
-    ON
-        v.visit_date = l.visit_date
-        AND v.utm_source = l.utm_source
-        AND v.utm_medium = l.utm_medium
-        AND v.utm_campaign = l.utm_campaign
+    ON v.visit_date = l.visit_date
+   AND v.utm_source = l.utm_source
+   AND v.utm_medium = l.utm_medium
+   AND v.utm_campaign = l.utm_campaign
 LEFT JOIN ads_union AS au
-    ON
-        v.visit_date = au.visit_date
-        AND v.utm_source = au.utm_source
-        AND v.utm_medium = au.utm_medium
-        AND v.utm_campaign = au.utm_campaign;
-
--- ========================= dataset A (основное) ==========================
-
+    ON v.visit_date = au.visit_date
+   AND v.utm_source = au.utm_source
+   AND v.utm_medium = au.utm_medium
+   AND v.utm_campaign = au.utm_campaign
+ORDER BY
+    v.visit_date ASC,
+    v.visitors_count DESC,
+    v.utm_source ASC,
+    v.utm_medium ASC,
+    v.utm_campaign ASC
+;
