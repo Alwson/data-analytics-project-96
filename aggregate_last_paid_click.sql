@@ -31,8 +31,8 @@ WITH last_paid_click AS (
         FROM leads AS l
         JOIN sessions AS s
             ON
-                l.visitor_id = s.visitor_id
-                AND l.created_at >= s.visit_date
+                leads.visitor_id = sessions.visitor_id
+                AND leads.created_at >= sessions.visit_date
         WHERE LOWER(s.medium) IN (
             'cpc', 'cpm', 'cpa', 'youtube', 'cpp', 'tg', 'social'
         )
@@ -140,7 +140,7 @@ LEFT JOIN leads_agg AS l
         AND v.utm_campaign = l.utm_campaign
 LEFT JOIN
     ads_union AS au
-    ON 
+    ON
         v.visit_date = au.visit_date
         AND v.utm_source = au.utm_source
         AND v.utm_medium = au.utm_medium
@@ -148,4 +148,3 @@ LEFT JOIN
 ORDER BY
     v.visit_date ASC,
     v.utm_source ASC;
-
