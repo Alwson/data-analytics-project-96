@@ -10,15 +10,17 @@ WITH metrics AS (
         SUM(l.revenue) AS revenue
     FROM visits_agg AS v
     LEFT JOIN leads_agg AS l
-        ON v.visit_date = l.visit_date
-       AND v.utm_source = l.utm_source
-       AND v.utm_medium = l.utm_medium
-       AND v.utm_campaign = l.utm_campaign
+        ON
+            v.visit_date = l.visit_date
+            AND v.utm_source = l.utm_source
+            AND v.utm_medium = l.utm_medium
+            AND v.utm_campaign = l.utm_campaign
     LEFT JOIN ads_union AS au
-        ON v.visit_date = au.visit_date
-       AND v.utm_source = au.utm_source
-       AND v.utm_medium = au.utm_medium
-       AND v.utm_campaign = au.utm_campaign
+        ON
+            v.visit_date = au.visit_date
+           AND v.utm_source = au.utm_source
+           AND v.utm_medium = au.utm_medium
+           AND v.utm_campaign = au.utm_campaign
     GROUP BY
         v.utm_source
 )
@@ -38,3 +40,4 @@ FROM metrics AS m
 ORDER BY
     roi_percent DESC NULLS LAST
 ;
+
