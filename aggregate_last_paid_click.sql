@@ -30,8 +30,9 @@ WITH last_paid_click AS (
             ) AS rn
         FROM leads AS l
         JOIN sessions AS s
-            ON l.visitor_id = s.visitor_id
-           AND l.created_at >= s.visit_date
+            ON 
+                    l.visitor_id = s.visitor_id
+               AND l.created_at >= s.visit_date
         WHERE LOWER(s.medium) IN (
             'cpc', 'cpm', 'cpa', 'youtube', 'cpp', 'tg', 'social'
         )
@@ -47,9 +48,10 @@ visits_agg AS (
         LOWER(s.campaign) AS utm_campaign,
         COUNT(DISTINCT s.visitor_id) AS visitors_count
     FROM sessions AS s
-    WHERE LOWER(s.medium) IN (
-        'cpc', 'cpm', 'cpa', 'youtube', 'cpp', 'tg', 'social'
-    )
+    WHERE 
+        LOWER(s.medium) IN (
+            'cpc', 'cpm', 'cpa', 'youtube', 'cpp', 'tg', 'social'
+        )
     GROUP BY
         s.visit_date::date,
         LOWER(s.source),
@@ -66,16 +68,18 @@ leads_agg AS (
         COUNT(DISTINCT lpc.lead_id) AS leads_count,
         COUNT(
             DISTINCT CASE
-                WHEN lpc.closing_reason = 'Успешно реализовано'
-                  OR lpc.status_id = 142
-                THEN lpc.lead_id
+                WHEN 
+                    lpc.closing_reason = 'Успешно реализовано'
+                    OR lpc.status_id = 142
+                        THEN lpc.lead_id
             END
         ) AS purchases_count,
         SUM(
             CASE
-                WHEN lpc.closing_reason = 'Успешно реализовано'
-                  OR lpc.status_id = 142
-                THEN lpc.amount
+                WHEN 
+                    lpc.closing_reason = 'Успешно реализовано'
+                    OR lpc.status_id = 142
+                        THEN lpc.amount
             END
         ) AS revenue
     FROM last_paid_click AS lpc
@@ -129,16 +133,17 @@ SELECT
     l.revenue
 FROM visits_agg AS v
 LEFT JOIN leads_agg AS l
-    ON v.visit_date = l.visit_date
-   AND v.utm_source = l.utm_source
-   AND v.utm_medium = l.utm_medium
-   AND v.utm_campaign = l.utm_campaign
+        ON v.visit_date = l.visit_date
+        AND v.utm_source = l.utm_source
+        AND v.utm_medium = l.utm_medium
+        AND v.utm_campaign = l.utm_campaign
 LEFT JOIN ads_union AS au
-    ON v.visit_date = au.visit_date
-   AND v.utm_source = au.utm_source
-   AND v.utm_medium = au.utm_medium
-   AND v.utm_campaign = au.utm_campaign
+        ON v.visit_date = au.visit_date
+        AND v.utm_source = au.utm_source
+        AND v.utm_medium = au.utm_medium
+        AND v.utm_campaign = au.utm_campaign
 ORDER BY
     v.visit_date ASC,
     v.utm_source ASC
 ;
+
